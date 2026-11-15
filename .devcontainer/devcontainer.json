@@ -1,0 +1,8 @@
+{
+  "name": "Flutter",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "ghcr.io/nils-geistmann/devcontainers-features/flutter:0": {}
+  },
+  "postCreateCommand": "flutter pub get"
+}
