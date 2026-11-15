@@ -140,7 +140,7 @@ class MainSystemWindow extends StatefulWidget {
 
 class _MainSystemWindowState extends State<MainSystemWindow> with TickerProviderStateMixin {
   TabController? _tabController;
-  List> _categories = [];
+  List<Map<String, dynamic>> _categories = [];
   bool _isLoading = true;
 
   @override
@@ -151,7 +151,9 @@ class _MainSystemWindowState extends State<MainSystemWindow> with TickerProvider
 
   Future<void> _loadAllData() async {
     final db = await DatabaseManager.instance.database;
-    final cats = await db.query('categories');
+    final List<Map<String, dynamic>> cats = (await db.query('categories'))
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
 
     if (!mounted) return;
 
@@ -239,9 +241,9 @@ class _ConstantsTabState extends State<ConstantsTab> {
   int? _selectedCatForItem;
   String _entType = 'جهة';
 
-  List> _categories = [];
-  List> _items = [];
-  List> _entities = [];
+  List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _entities = [];
 
   @override
   void initState() {
@@ -251,12 +253,18 @@ class _ConstantsTabState extends State<ConstantsTab> {
 
   Future<void> _loadData() async {
     final db = await DatabaseManager.instance.database;
-    final cats = await db.query('categories');
-    final items = await db.rawQuery('''
-      SELECT i.id, i.name, c.name as cat_name 
+    final List<Map<String, dynamic>> cats = (await db.query('categories'))
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+    final List<Map<String, dynamic>> items = (await db.rawQuery('''
+      SELECT i.id, i.name, c.name as cat_name
       FROM items i JOIN categories c ON i.category_id = c.id
-    ''');
-    final ents = await db.query('entities');
+    '''))
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+    final List<Map<String, dynamic>> ents = (await db.query('entities'))
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
 
     if (!mounted) return;
 
@@ -598,9 +606,9 @@ class CategoryRecordsView extends StatefulWidget {
 }
 
 class _CategoryRecordsViewState extends State<CategoryRecordsView> {
-  List> _records = [];
-  List> _items = [];
-  List> _entities = [];
+  List<Map<String, dynamic>> _records = [];
+  List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _entities = [];
   bool _isLoading = true;
 
   @override
@@ -611,16 +619,26 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
 
   Future<void> _loadCategoryData() async {
     final db = await DatabaseManager.instance.database;
-    final records = await db.rawQuery('''
+    final List<Map<String, dynamic>> records = (await db.rawQuery('''
       SELECT r.*, i.name as item_name, e.name as entity_name
       FROM custody_records r
       JOIN items i ON r.item_id = i.id
       JOIN entities e ON r.entity_id = e.id
       WHERE r.category_id = ?
       ORDER BY r.id DESC
-    ''', [widget.categoryId]);
-    final items = await db.query('items', where: 'category_id = ?', whereArgs: [widget.categoryId]);
-    final entities = await db.query('entities');
+    ''', [widget.categoryId]))
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+    final List<Map<String, dynamic>> items = (await db.query(
+      'items',
+      where: 'category_id = ?',
+      whereArgs: [widget.categoryId],
+    ))
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
+    final List<Map<String, dynamic>> entities = (await db.query('entities'))
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList();
 
     if (!mounted) return;
 
