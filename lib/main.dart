@@ -14,7 +14,7 @@ class CustodyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'نظام إدارة العهد والمخازن',
+      title: 'النظام الشامل لإدارة العهد والمخازن',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -27,7 +27,7 @@ class CustodyApp extends StatelessWidget {
   }
 }
 
-// ---------------- Database Manager ----------------
+// ================= DATABASE MANAGER =================
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -110,7 +110,7 @@ class DatabaseHelper {
   }
 }
 
-// ---------------- Main Screen with Tabs ----------------
+// ================= MAIN SCREEN =================
 class MainSystemScreen extends StatefulWidget {
   const MainSystemScreen({Key? key}) : super(key: key);
 
@@ -118,7 +118,7 @@ class MainSystemScreen extends StatefulWidget {
   _MainSystemScreenState createState() => _MainSystemScreenState();
 }
 
-class _MainSystemScreenState extends State<MainSystemScreen> with TickerCodeMixin, SingleTickerProviderStateMixin {
+class _MainSystemScreenState extends State<MainSystemScreen> with TickerProviderStateMixin {
   TabController? _tabController;
   List> categories = [];
 
@@ -133,7 +133,7 @@ class _MainSystemScreenState extends State<MainSystemScreen> with TickerCodeMixi
     final cats = await db.query('categories');
     setState(() {
       categories = cats;
-      // 3 tabs fixed (Constants, Dashboard, Settings) + dynamic categories
+      // 3 fixed tabs (Constants, Dashboard, Settings) + dynamic category tabs
       _tabController = TabController(length: 3 + categories.length, vsync: this);
     });
   }
@@ -150,14 +150,14 @@ class _MainSystemScreenState extends State<MainSystemScreen> with TickerCodeMixi
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🛡️ نظام إدارة ومتابعة العهد والمخازن', style: TextStyle(fontSize: 14)),
+        title: const Text('🛡️ النظام الشامل لإدارة ومتابعة العهد والمخازن', style: TextStyle(fontSize: 13)),
         backgroundColor: const Color(0xFF1E293B),
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
           indicatorColor: Colors.lightBlueAccent,
           tabs: [
-            const Tab(text: '⚙️ الثوابت'),
+            const Tab(text: '⚙️ شاشة الثوابت'),
             const Tab(text: '📊 المؤشرات وجرد الجهات'),
             const Tab(text: '⚙️ الإعدادات'),
             ...categories.map((cat) => Tab(text: '📁 ${cat['name']}')).toList(),
@@ -177,7 +177,7 @@ class _MainSystemScreenState extends State<MainSystemScreen> with TickerCodeMixi
   }
 }
 
-// ---------------- 1. Constants Tab ----------------
+// ================= 1. CONSTANTS TAB =================
 class ConstantsTab extends StatefulWidget {
   final VoidCallback onCategoryChanged;
   const ConstantsTab({Key? key, required this.onCategoryChanged}) : super(key: key);
@@ -231,16 +231,15 @@ class _ConstantsTabState extends State<ConstantsTab> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        // Categories Section
         Card(
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('📦 إدارة الفئات والأعمدة المخصصة', style: TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold)),
-                TextField(controller: catNameController, decoration: const InputDecoration(labelText: 'اسم الفئة (مثال: آليات)')),
-                TextField(controller: catColsController, decoration: const InputDecoration(labelText: 'الأعمدة المخصصة مفصولين بفاصلة (رقم الهيكل, المالك)')),
+                const Text('📦 1. إدارة فئات المخازن وتحديد الأعمدة المخصصة', style: TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold)),
+                TextField(controller: catNameController, decoration: const InputDecoration(labelText: 'اسم الفئة (مثل: آليات)')),
+                TextField(controller: catColsController, decoration: const InputDecoration(labelText: 'الأعمدة المخصصة مفصولين بفاصلة (رقم الهيكل, رقم اللوحة)')),
                 const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: () async {
@@ -256,27 +255,26 @@ class _ConstantsTabState extends State<ConstantsTab> {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الفئة موجودة مسبقاً!')));
                     }
                   },
-                  child: const Text('إضافة الفئة'),
+                  child: const Text('إضافة الفئة مع أعمدتها'),
                 )
               ],
             ),
           ),
         ),
-        // Items Section
         Card(
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('📌 إدارة الأصناف وإجمالي الوارد', style: TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold)),
+                const Text('📌 2. إدارة الأصناف وإجمالي الوارد', style: TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold)),
                 DropdownButton<int>(
                   value: selectedCatId,
                   isExpanded: true,
                   items: cats.map((c) => DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['name'] as String))).toList(),
                   onChanged: (val) => setState(() => selectedCatId = val),
                 ),
-                TextField(controller: itemNameController, decoration: const InputDecoration(labelText: 'اسم الصنف')),
+                TextField(controller: itemNameController, decoration: const InputDecoration(labelText: 'اسم الصنف الجديد')),
                 TextField(controller: itemInboundController, decoration: const InputDecoration(labelText: 'إجمالي الوارد للمخزن'), keyboardType: TextInputType.number),
                 const SizedBox(height: 8),
                 ElevatedButton(
@@ -301,14 +299,13 @@ class _ConstantsTabState extends State<ConstantsTab> {
             ),
           ),
         ),
-        // Entities Section
         Card(
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('🏢 إدارة الجهات والأفراد المستفيدين', style: TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold)),
+                const Text('🏢 3. إدارة الجهات والأفراد المستفيدين', style: TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold)),
                 TextField(controller: entNameController, decoration: const InputDecoration(labelText: 'اسم الجهة أو الفرد (مثل: الميمون)')),
                 DropdownButton<String>(
                   value: entType,
@@ -329,7 +326,7 @@ class _ConstantsTabState extends State<ConstantsTab> {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('المستفيد موجود مسبقاً!')));
                     }
                   },
-                  child: const Text('إضافة المستفيد'),
+                  child: const Text('إضافة جهة / فرد'),
                 )
               ],
             ),
@@ -340,7 +337,7 @@ class _ConstantsTabState extends State<ConstantsTab> {
   }
 }
 
-// ---------------- 2. Dashboard & Entity Full Records Tab ----------------
+// ================= 2. DASHBOARD TAB =================
 class DashboardTab extends StatefulWidget {
   final VoidCallback onDataChanged;
   const DashboardTab({Key? key, required this.onDataChanged}) : super(key: key);
@@ -419,7 +416,7 @@ class _DashboardTabState extends State<DashboardTab> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        const Text('📊 لوحة المؤشرات العامة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.lightBlueAccent)),
+        const Text('📊 لوحة المؤشرات العامة وجرد ذمة الجهات', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.lightBlueAccent)),
         const SizedBox(height: 10),
         Row(
           children: [
@@ -433,8 +430,14 @@ class _DashboardTabState extends State<DashboardTab> {
             Expanded(child: StatCard(title: 'المتبقي بالمخزن', value: '$totalRemaining', color: Colors.green)),
           ],
         ),
+        const SizedBox(height: 10),
+        ElevatedButton(
+          onPressed: loadStatsAndEntities,
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+          child: const Text('🔄 تحديث الإحصائيات العامة'),
+        ),
         const Divider(height: 30),
-        const Text('🔍 كشف الذمة الشامل لجهة أو فرد', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.lightBlueAccent)),
+        const Text('🔍 كشف الذمة الشامل (مصروف + تالف عبر كل الفئات)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.lightBlueAccent)),
         DropdownButton<int>(
           value: selectedEntityId,
           isExpanded: true,
@@ -457,7 +460,7 @@ class _DashboardTabState extends State<DashboardTab> {
               return Card(
                 color: isLoss ? Colors.red.withOpacity(0.2) : Colors.green.withOpacity(0.2),
                 child: ListTile(
-                  title: Text('${rec['type']} - ${rec['item_name']} (${rec['cat_name']})'),
+                  title: Text('${rec['type']} - ${rec['item_name']} (${rec['cat_name']})', style: TextStyle(color: isLoss ? Colors.redAccent : Colors.greenAccent)),
                   subtitle: Text('الكمية: ${rec['quantity']} | الحالة: ${rec['info']}\nالتاريخ: ${rec['date']}'),
                 ),
               );
@@ -493,7 +496,7 @@ class StatCard extends StatelessWidget {
   }
 }
 
-// ---------------- 3. Category Management & Custody/Loss View Tab ----------------
+// ================= 3. CATEGORY VIEW TAB =================
 class CategoryViewTab extends StatefulWidget {
   final Map<String, dynamic> category;
   const CategoryViewTab({Key? key, required this.category}) : super(key: key);
@@ -534,9 +537,41 @@ class _CategoryViewTabState extends State<CategoryViewTab> {
     });
   }
 
-  void _openAddCustodyDialog() async {
-    // يمكن فتح نافذة حوار لإضافة عهدة جديدة
-    loadRecords();
+  void _openAddCustodyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        int? selectedEntity;
+        int? selectedItem;
+        final qtyController = TextEditingController(text: '1');
+        final orderController = TextEditingController();
+        final notesController = TextEditingController();
+
+        return AlertDialog(
+          title: const Text('إضافة حركة صرف عهدة جديدة'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: qtyController, decoration: const InputDecoration(labelText: 'الكمية'), keyboardType: TextInputType.number),
+                TextField(controller: orderController, decoration: const InputDecoration(labelText: 'أمر الصرف')),
+                TextField(controller: notesController, decoration: const InputDecoration(labelText: 'ملاحظات')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                loadRecords();
+              },
+              child: const Text('حفظ'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -549,22 +584,22 @@ class _CategoryViewTabState extends State<CategoryViewTab> {
             color: const Color(0xFF1E293B),
             child: const TabBar(
               tabs: [
-                Tab(text: 'سجل العهد وحركات الصرف'),
-                Tab(text: 'سجل الإتلاف والخسائر'),
+                Tab(text: '📋 سجل العهد وحركات الصرف'),
+                Tab(text: '⚠️ سجل الإتلاف والخسائر'),
               ],
             ),
           ),
           Expanded(
             child: TabBarView(
               children: [
-                // Tab 1: Custody
                 Column(
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: ElevatedButton(
                         onPressed: _openAddCustodyDialog,
-                        child: const Text('➕ إضافة حركة صرف عهدة'),
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.lightBlue),
+                        child: const Text('➕ إضافة حركة صرف عهدة جديدة'),
                       ),
                     ),
                     Expanded(
@@ -572,23 +607,27 @@ class _CategoryViewTabState extends State<CategoryViewTab> {
                         itemCount: custodyList.length,
                         itemBuilder: (ctx, i) {
                           final item = custodyList[i];
-                          return ListTile(
-                            title: Text('${item['ent_name']} - ${item['item_name']} (الكمية: ${item['quantity']})'),
-                            subtitle: Text('الحالة: ${item['status']} | التاريخ: ${item['issue_date']}'),
+                          return Card(
+                            child: ListTile(
+                              title: Text('${item['ent_name']} - ${item['item_name']} (الكمية: ${item['quantity']})'),
+                              subtitle: Text('الحالة: ${item['status']} | التاريخ: ${item['issue_date']}'),
+                            ),
                           );
                         },
                       ),
                     ),
                   ],
                 ),
-                // Tab 2: Losses
                 ListView.builder(
                   itemCount: lossList.length,
                   itemBuilder: (ctx, i) {
                     final item = lossList[i];
-                    return ListTile(
-                      title: Text('${item['ent_name']} - ${item['item_name']} (تالف: ${item['quantity']})'),
-                      subtitle: Text('السبب: ${item['loss_reason']} | الحالة: ${item['status']}'),
+                    return Card(
+                      color: Colors.red.withOpacity(0.15),
+                      child: ListTile(
+                        title: Text('${item['ent_name']} - ${item['item_name']} (تالف: ${item['quantity']})', style: const TextStyle(color: Colors.redAccent)),
+                        subtitle: Text('السبب: ${item['loss_reason']} | الحالة: ${item['status']}'),
+                      ),
                     );
                   },
                 ),
@@ -601,7 +640,7 @@ class _CategoryViewTabState extends State<CategoryViewTab> {
   }
 }
 
-// ---------------- 4. Settings Tab ----------------
+// ================= 4. SETTINGS TAB =================
 class SettingsTab extends StatelessWidget {
   const SettingsTab({Key? key}) : super(key: key);
 
