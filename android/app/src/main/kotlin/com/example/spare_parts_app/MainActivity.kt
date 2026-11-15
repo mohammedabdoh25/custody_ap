@@ -1,4 +1,4 @@
-package com.example.blank_app
+package com.example.custody_app
 
 import io.flutter.embedding.android.FlutterActivity
 
