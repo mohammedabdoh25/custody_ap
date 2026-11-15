@@ -6,7 +6,7 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         
-        <!-- أضف هذا السطر هنا بالتحديد داخل الـ application -->
+        <!-- هذا السطر هو المسؤول عن تفعيل V2 Embedding إجبارياً -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
