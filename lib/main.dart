@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   runApp(const CustodyApp());
@@ -61,7 +61,7 @@ class DatabaseManager {
 
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    final path = p.join(dbPath, filePath);
 
     return await openDatabase(
       path,
@@ -139,7 +139,6 @@ class _MainSystemWindowState extends State<MainSystemWindow> with SingleTickerPr
     final cats = await db.query('categories');
     setState(() {
       _categories = cats;
-      // 2 tabs for Constants and Settings, plus categories count
       _tabController = TabController(length: 2 + _categories.length, vsync: this);
       _isLoading = false;
     });
@@ -234,7 +233,6 @@ class _ConstantsTabState extends State<ConstantsTab> {
     return ListView(
       padding: const EdgeInsets.all(12.0),
       children: [
-        // 1. الفئات
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -294,8 +292,6 @@ class _ConstantsTabState extends State<ConstantsTab> {
             ),
           ),
         ),
-
-        // 2. الأصناف
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -365,8 +361,6 @@ class _ConstantsTabState extends State<ConstantsTab> {
             ),
           ),
         ),
-
-        // 3. الجهات والأفراد
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -440,7 +434,6 @@ class _ConstantsTabState extends State<ConstantsTab> {
   }
 }
 
-// ----------------- شاشة الإعدادات والستايلات -----------------
 class SettingsTab extends StatelessWidget {
   final Function(ThemeMode) onThemeChanged;
   const SettingsTab({Key? key, required this.onThemeChanged}) : super(key: key);
@@ -470,7 +463,6 @@ class SettingsTab extends StatelessWidget {
   }
 }
 
-// ----------------- سجلات العهد لكل فئة (جدول تفصيلي) -----------------
 class CategoryRecordsView extends StatefulWidget {
   final int categoryId;
   final String categoryName;
@@ -569,7 +561,6 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
   }
 }
 
-// ----------------- نافذة إضافة / تعديل حركة عهدة -----------------
 class CustodyDialog extends StatefulWidget {
   final int categoryId;
   final Map<String, dynamic>? record;
