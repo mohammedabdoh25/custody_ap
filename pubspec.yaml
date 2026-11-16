@@ -21,7 +21,7 @@ dependencies:
 
   # حزم توليد الـ PDF وتنسيق التواريخ
   #pdf: ^3.10.4
-  printing: ^5.11.1
+  #printing: ^5.11.1
   intl: ^0.18.1
 
 dev_dependencies:
