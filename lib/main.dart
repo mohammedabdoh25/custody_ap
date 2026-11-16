@@ -718,8 +718,7 @@ class _DashboardTabState extends State<DashboardTab> {
                       color: isLoss ? Colors.red.withOpacity(0.2) : Colors.green.withOpacity(0.2),
                       child: ListTile(
                         title: Text('${rec['type']} - ${rec['item_name']} (${rec['cat_name']})', style: TextStyle(color: isLoss ? Colors.redAccent : Colors.greenAccent, fontWeight: FontWeight.bold)),
-                        subtitle: Text('الكمية: ${rec['quantity']} | التفاصيل: ${rec['info']}
-التاريخ: ${rec['date']}'),
+                        subtitle: Text('الكمية: ${rec['quantity']} | التفاصيل: ${rec['info']}\nالتاريخ: ${rec['date']}'),
                       ),
                     );
                   },
