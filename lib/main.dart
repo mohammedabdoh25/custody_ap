@@ -1,7 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 typedef DataRowMap = Map<String, dynamic>;
 
@@ -328,7 +334,6 @@ class _ConstantsTabState extends State<ConstantsTab> {
     return ListView(
       padding: const EdgeInsets.all(12.0),
       children: [
-        // --- القسم الأول: فئات المخازن والأعمدة المخصصة ---
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -398,7 +403,6 @@ class _ConstantsTabState extends State<ConstantsTab> {
           ),
         ),
         const SizedBox(height: 12),
-        // --- القسم الثاني: الأصناف والوارد ---
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -490,7 +494,6 @@ class _ConstantsTabState extends State<ConstantsTab> {
           ),
         ),
         const SizedBox(height: 12),
-        // --- القسم الثالث: الجهات والمستلمين ---
         Card(
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -711,13 +714,14 @@ class _DashboardTabState extends State<DashboardTab> {
                   itemBuilder: (ctx, idx) {
                     final rec = entityRecords[idx];
                     final isLoss = rec['type'] == 'تالف / مفقود';
-	                    return Card(
-	                      color: isLoss ? Colors.red.withOpacity(0.2) : Colors.green.withOpacity(0.2),
-	                      child: ListTile(
-	                        title: Text('${rec['type']} - ${rec['item_name']} (${rec['cat_name']})', style: TextStyle(color: isLoss ? Colors.redAccent : Colors.greenAccent, fontWeight: FontWeight.bold)),
-	                        subtitle: Text('الكمية: ${rec['quantity']} | التفاصيل: ${rec['info']}\nالتاريخ: ${rec['date']}'),
-	                      ),
-	                    );
+                    return Card(
+                      color: isLoss ? Colors.red.withOpacity(0.2) : Colors.green.withOpacity(0.2),
+                      child: ListTile(
+                        title: Text('${rec['type']} - ${rec['item_name']} (${rec['cat_name']})', style: TextStyle(color: isLoss ? Colors.redAccent : Colors.greenAccent, fontWeight: FontWeight.bold)),
+                        subtitle: Text('الكمية: ${rec['quantity']} | التفاصيل: ${rec['info']}
+التاريخ: ${rec['date']}'),
+                      ),
+                    );
                   },
                 ),
         )
@@ -871,6 +875,190 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
       _entities = entities;
       _isLoading = false;
     });
+  }
+
+  // --- دالة تصدير عهد الفئة إلى اكسل (CSV) ---
+  Future<void> _exportCustodyExcel() async {
+    if (_records.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد بيانات عهد لتصديرها!')));
+      return;
+    }
+
+    try {
+      List<List<dynamic>> rows = [];
+      rows.add(['المستفيد', 'الصنف', 'الكمية', 'أمر الصرف', 'الحالة الميدانية', 'التاريخ', 'ملاحظات']);
+      
+      for (var r in _records) {
+        rows.add([
+          r['entity_name'] ?? '',
+          r['item_name'] ?? '',
+          r['quantity'] ?? 0,
+          r['order_ref'] ?? '',
+          r['status'] ?? '',
+          r['issue_date'] ?? '',
+          r['notes'] ?? '',
+        ]);
+      }
+
+      String csvData = rows.map((row) => row.map((val) => '"$val"').join(',')).join('
+');
+      final output = await getTemporaryDirectory();
+      final file = File("${output.path}/custody_${widget.categoryName}.csv");
+      await file.writeAsBytes([0xEF, 0xBB, 0xBF, ...utf8.encode(csvData)]);
+
+      await Share.shareXFiles([XFile(file.path)], text: 'كشف عهد فئة: ${widget.categoryName}');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ أثناء التصدير: $e')));
+    }
+  }
+
+  // --- دالة تصدير عهد الفئة إلى PDF ---
+  Future<void> _exportCustodyPdf() async {
+    if (_records.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد بيانات عهد لتصديرها!')));
+      return;
+    }
+
+    try {
+      final font = await PdfGoogleFonts.amiriRegular();
+      final boldFont = await PdfGoogleFonts.amiriBold();
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          textDirection: pw.TextDirection.rtl,
+          theme: pw.ThemeData.withFont(base: font, bold: boldFont),
+          build: (pw.Context context) {
+            return [
+              pw.Header(
+                level: 0,
+                child: pw.Text('كشف حركات العهد والمخازن - فئة: ${widget.categoryName}',
+                    style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              ),
+              pw.SizedBox(height: 10),
+              pw.TableHelper.fromTextArray(
+                headers: ['ملاحظات', 'التاريخ', 'الحالة الميدانية', 'أمر الصرف', 'الكمية', 'الصنف', 'المستفيد'],
+                data: _records.map((r) => [
+                  r['notes']?.toString() ?? '',
+                  r['issue_date']?.toString() ?? '',
+                  r['status']?.toString() ?? '',
+                  r['order_ref']?.toString() ?? '',
+                  r['quantity']?.toString() ?? '0',
+                  r['item_name']?.toString() ?? '',
+                  r['entity_name']?.toString() ?? '',
+                ]).toList(),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
+                cellAlignment: pw.Alignment.center,
+                cellStyle: const pw.TextStyle(fontSize: 10),
+              ),
+            ];
+          },
+        ),
+      );
+
+      final output = await getTemporaryDirectory();
+      final file = File("${output.path}/custody_${widget.categoryName}.pdf");
+      await file.writeAsBytes(await pdf.save());
+      await Share.shareXFiles([XFile(file.path)], text: 'تقرير PDF عهد فئة: ${widget.categoryName}');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ أثناء تصدير PDF: $e')));
+    }
+  }
+
+  // --- دالة تصدير إتلاف الفئة إلى اكسل (CSV) ---
+  Future<void> _exportLossExcel() async {
+    if (_lossRecords.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد بيانات إتلاف لتصديرها!')));
+      return;
+    }
+
+    try {
+      List<List<dynamic>> rows = [];
+      rows.add(['المستفيد', 'الصنف', 'الكمية التالفة', 'حالة التلف', 'سبب الإتلاف', 'التاريخ', 'ملاحظات']);
+      
+      for (var l in _lossRecords) {
+        rows.add([
+          l['entity_name'] ?? '',
+          l['item_name'] ?? '',
+          l['quantity'] ?? 0,
+          l['status'] ?? '',
+          l['loss_reason'] ?? '',
+          l['loss_date'] ?? '',
+          l['notes'] ?? '',
+        ]);
+      }
+
+      String csvData = rows.map((row) => row.map((val) => '"$val"').join(',')).join('
+');
+      final output = await getTemporaryDirectory();
+      final file = File("${output.path}/losses_${widget.categoryName}.csv");
+      await file.writeAsBytes([0xEF, 0xBB, 0xBF, ...utf8.encode(csvData)]);
+
+      await Share.shareXFiles([XFile(file.path)], text: 'تقرير الإتلاف فئة: ${widget.categoryName}');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ أثناء التصدير: $e')));
+    }
+  }
+
+  // --- دالة تصدير إتلاف الفئة إلى PDF ---
+  Future<void> _exportLossPdf() async {
+    if (_lossRecords.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا توجد بيانات إتلاف لتصديرها!')));
+      return;
+    }
+
+    try {
+      final font = await PdfGoogleFonts.amiriRegular();
+      final boldFont = await PdfGoogleFonts.amiriBold();
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          textDirection: pw.TextDirection.rtl,
+          theme: pw.ThemeData.withFont(base: font, bold: boldFont),
+          build: (pw.Context context) {
+            return [
+              pw.Header(
+                level: 0,
+                child: pw.Text('تقرير الإتلاف والخسائر - فئة: ${widget.categoryName}',
+                    style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+              ),
+              pw.SizedBox(height: 10),
+              pw.TableHelper.fromTextArray(
+                headers: ['ملاحظات', 'التاريخ', 'سبب الإتلاف', 'حالة التلف', 'الكمية', 'الصنف', 'المستفيد'],
+                data: _lossRecords.map((l) => [
+                  l['notes']?.toString() ?? '',
+                  l['loss_date']?.toString() ?? '',
+                  l['loss_reason']?.toString() ?? '',
+                  l['status']?.toString() ?? '',
+                  l['quantity']?.toString() ?? '0',
+                  l['item_name']?.toString() ?? '',
+                  l['entity_name']?.toString() ?? '',
+                ]).toList(),
+                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.red900),
+                cellAlignment: pw.Alignment.center,
+                cellStyle: const pw.TextStyle(fontSize: 10),
+              ),
+            ];
+          },
+        ),
+      );
+
+      final output = await getTemporaryDirectory();
+      final file = File("${output.path}/losses_${widget.categoryName}.pdf");
+      await file.writeAsBytes(await pdf.save());
+      await Share.shareXFiles([XFile(file.path)], text: 'تقرير PDF إتلاف فئة: ${widget.categoryName}');
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ أثناء تصدير PDF: $e')));
+    }
   }
 
   void _showAddRecordDialog() {
@@ -1130,6 +1318,7 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
           Container(
             color: const Color(0xFF1E293B),
             child: const TabBar(
+              isScrollable: true,
               tabs: [
                 Tab(text: '📋 سجل العهد وحركات الصرف'),
                 Tab(text: '⚠️ سجل الإتلاف والخسائر'),
@@ -1139,7 +1328,33 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
           Expanded(
             child: TabBarView(
               children: [
+                // تاب العهد
                 Scaffold(
+                  appBar: AppBar(
+                    toolbarHeight: 45,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    actions: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                          onPressed: _exportCustodyExcel,
+                          icon: const Icon(Icons.table_chart, size: 16),
+                          label: const Text('Excel', style: TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                          onPressed: _exportCustodyPdf,
+                          icon: const Icon(Icons.picture_as_pdf, size: 16),
+                          label: const Text('PDF', style: TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                    ],
+                  ),
                   body: _records.isEmpty
                       ? Center(child: Text('لا توجد عهد مسجلة في (${widget.categoryName})'))
                       : ListView.builder(
@@ -1194,7 +1409,33 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
                     label: const Text('صرف عهدة جديدة'),
                   ),
                 ),
+                // تاب الإتلاف
                 Scaffold(
+                  appBar: AppBar(
+                    toolbarHeight: 45,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    actions: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                          onPressed: _exportLossExcel,
+                          icon: const Icon(Icons.table_chart, size: 16),
+                          label: const Text('Excel', style: TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                          onPressed: _exportLossPdf,
+                          icon: const Icon(Icons.picture_as_pdf, size: 16),
+                          label: const Text('PDF', style: TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                    ],
+                  ),
                   body: _lossRecords.isEmpty
                       ? const Center(child: Text('لا توجد سجلات إتلاف أو خسائر'))
                       : ListView.builder(
