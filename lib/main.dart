@@ -11,6 +11,12 @@ import 'package:printing/printing.dart';
 
 typedef DataRowMap = Map<String, dynamic>;
 
+String _csvEscape(Object? value) {
+  final text = value?.toString() ?? '';
+  return '"${text.replaceAll('"', '""')}"';
+}
+
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const CustodyApp());
@@ -991,8 +997,7 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
         ]);
       }
 
-      String csvData = rows.map((row) => row.map((val) => '"$val"').join(',')).join('
-');
+      String csvData = rows.map((row) => row.map(_csvEscape).join(',')).join('\r\n');
       final output = await getTemporaryDirectory();
       final file = File("${output.path}/losses_${widget.categoryName}.csv");
       await file.writeAsBytes([0xEF, 0xBB, 0xBF, ...utf8.encode(csvData)]);
