@@ -1,4 +1,4 @@
-Name: Build Flutter Android APK
+name: Build Flutter Android APK
 
 on:
   push:
@@ -26,12 +26,6 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
           cache: true
-
-      - name: Recreate Android Directory with V2 Embedding
-        run: |
-          # إعادة إنشاء مجلد الأندرويد بالمعايير الحديثة ودعم V2 تلقائياً
-          rm -rf android
-          flutter create . --org com.example --project-name custody_app --platforms=android
 
       - name: Clean and Install Dependencies
         run: |
