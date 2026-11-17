@@ -1,4 +1,4 @@
-name: Build Flutter Android APK
+Name: Build Flutter Android APK
 
 on:
   push:
@@ -33,8 +33,10 @@ jobs:
           rm -rf android
           flutter create . --org com.example --project-name custody_app --platforms=android
 
-      - name: Install Dependencies
-        run: flutter pub get
+      - name: Clean and Install Dependencies
+        run: |
+          flutter clean
+          flutter pub get
 
       - name: Build Release APK
         run: flutter build apk --release
