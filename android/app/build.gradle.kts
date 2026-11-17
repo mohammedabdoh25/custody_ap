@@ -5,6 +5,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Kotlin 1.8+ includes the JDK 7/8 extensions in kotlin-stdlib.
+// Some Flutter plugins still request the obsolete split artifacts, which
+// causes duplicate-class errors during release builds.
+configurations.all {
+    exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk7")
+    exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk8")
+}
+
 android {
     namespace = "com.example.custody_app"
     compileSdk = flutter.compileSdkVersion
