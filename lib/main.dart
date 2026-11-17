@@ -11,6 +11,16 @@ import 'package:printing/printing.dart';
 
 typedef DataRowMap = Map<String, dynamic>;
 
+String _csvEscape(Object? value) {
+  final text = value?.toString() ?? '';
+  return '"${text.replaceAll('"', '""')}"';
+}
+
+String _safeFileName(String value) {
+  final sanitized = value.replaceAll(RegExp(r'[\/:*?"<>|\x00-\x1F]'), '_').trim();
+  return sanitized.isEmpty ? 'report' : sanitized;
+}
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const CustodyApp());
@@ -442,7 +452,14 @@ class _ConstantsTabState extends State<ConstantsTab> {
                       ElevatedButton(
                         onPressed: () async {
                           if (_itemNameController.text.trim().isEmpty || _selectedCatForItem == null) return;
-                          final inbound = int.tryParse(_itemInboundController.text.trim()) ?? 0;
+                          final inbound = int.tryParse(_itemInboundController.text.trim());
+                          if (inbound == null || inbound < 0) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('يجب إدخال إجمالي وارد صحيح وغير سالب.')),
+                            );
+                            return;
+                          }
                           try {
                             final db = await DatabaseManager.instance.database;
                             await db.insert('items', {
@@ -718,8 +735,7 @@ class _DashboardTabState extends State<DashboardTab> {
                       color: isLoss ? Colors.red.withOpacity(0.2) : Colors.green.withOpacity(0.2),
                       child: ListTile(
                         title: Text('${rec['type']} - ${rec['item_name']} (${rec['cat_name']})', style: TextStyle(color: isLoss ? Colors.redAccent : Colors.greenAccent, fontWeight: FontWeight.bold)),
-                        subtitle: Text('الكمية: ${rec['quantity']} | التفاصيل: ${rec['info']}
-التاريخ: ${rec['date']}'),
+                        subtitle: Text('الكمية: ${rec['quantity']} | التفاصيل: ${rec['info']}\nالتاريخ: ${rec['date']}'),
                       ),
                     );
                   },
@@ -900,10 +916,9 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
         ]);
       }
 
-      String csvData = rows.map((row) => row.map((val) => '"$val"').join(',')).join('
-');
+      String csvData = rows.map((row) => row.map(_csvEscape).join(',')).join('\r\n');
       final output = await getTemporaryDirectory();
-      final file = File("${output.path}/custody_${widget.categoryName}.csv");
+      final file = File(p.join(output.path, 'custody_${_safeFileName(widget.categoryName)}.csv'));
       await file.writeAsBytes([0xEF, 0xBB, 0xBF, ...utf8.encode(csvData)]);
 
       await Share.shareXFiles([XFile(file.path)], text: 'كشف عهد فئة: ${widget.categoryName}');
@@ -960,7 +975,7 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
       );
 
       final output = await getTemporaryDirectory();
-      final file = File("${output.path}/custody_${widget.categoryName}.pdf");
+      final file = File(p.join(output.path, 'custody_${_safeFileName(widget.categoryName)}.pdf'));
       await file.writeAsBytes(await pdf.save());
       await Share.shareXFiles([XFile(file.path)], text: 'تقرير PDF عهد فئة: ${widget.categoryName}');
     } catch (e) {
@@ -992,10 +1007,9 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
         ]);
       }
 
-      String csvData = rows.map((row) => row.map((val) => '"$val"').join(',')).join('
-');
+      String csvData = rows.map((row) => row.map(_csvEscape).join(',')).join('\r\n');
       final output = await getTemporaryDirectory();
-      final file = File("${output.path}/losses_${widget.categoryName}.csv");
+      final file = File(p.join(output.path, 'losses_${_safeFileName(widget.categoryName)}.csv'));
       await file.writeAsBytes([0xEF, 0xBB, 0xBF, ...utf8.encode(csvData)]);
 
       await Share.shareXFiles([XFile(file.path)], text: 'تقرير الإتلاف فئة: ${widget.categoryName}');
@@ -1052,7 +1066,7 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
       );
 
       final output = await getTemporaryDirectory();
-      final file = File("${output.path}/losses_${widget.categoryName}.pdf");
+      final file = File(p.join(output.path, 'losses_${_safeFileName(widget.categoryName)}.pdf'));
       await file.writeAsBytes(await pdf.save());
       await Share.shareXFiles([XFile(file.path)], text: 'تقرير PDF إتلاف فئة: ${widget.categoryName}');
     } catch (e) {
@@ -1158,7 +1172,13 @@ class _CategoryRecordsViewState extends State<CategoryRecordsView> {
                   ),
                   ElevatedButton(
                     onPressed: () async {
-                      final qty = int.tryParse(qtyController.text.trim()) ?? 1;
+                      final qty = int.tryParse(qtyController.text.trim());
+                      if (qty == null || qty <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('يجب إدخال كمية صحيحة أكبر من صفر.')),
+                        );
+                        return;
+                      }
                       final Map<String, String> extraData = {};
                       extraControllers.forEach((key, controller) {
                         extraData[key] = controller.text.trim();
